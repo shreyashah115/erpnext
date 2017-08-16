@@ -64,6 +64,8 @@ erpnext/schools/doctype/assessment_criteria_group/test_assessment_criteria_group
 erpnext/schools/doctype/assessment_criteria/test_assessment_criteria.js
 erpnext/schools/doctype/course/test_course.js
 erpnext/schools/doctype/program/test_program.js
+erpnext/hr/doctype/salary_structure/test_salary_structure.js
+erpnext/hr/doctype/salary_slip/test_salary_slip.js
 erpnext/schools/doctype/guardian/test_guardian.js
 erpnext/schools/doctype/student_admission/test_student_admission.js
 erpnext/schools/doctype/student_applicant/tests/test_student_applicant_dummy_data.js
@@ -95,3 +97,6 @@ erpnext/buying/doctype/supplier_quotation/tests/test_supplier_quotation_for_item
 erpnext/buying/doctype/purchase_order/tests/test_purchase_order.js
 erpnext/buying/doctype/purchase_order/tests/test_purchase_order_with_multi_uom.js
 erpnext/buying/doctype/purchase_order/tests/test_purchase_order_get_items.js
+erpnext/buying/doctype/purchase_order/tests/test_purchase_order_with_discount_on_grand_total.js
+erpnext/buying/doctype/purchase_order/tests/test_purchase_order_with_item_wise_discount.js
+erpnext/buying/doctype/purchase_order/tests/test_purchase_order_with_taxes_and_charges.js

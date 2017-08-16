@@ -39,7 +39,10 @@ QUnit.test("test: purchase order with discount on grand total", function(assert)
 			assert.ok(cur_frm.doc.grand_total == 2250, "Grand total correct");
 		},
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5fc5b68a49c197b2e6abc21addc2cac864fea7d8
 		() => frappe.tests.click_button('Submit'),
 		() => frappe.tests.click_button('Yes'),
 		() => frappe.timeout(0.3),
