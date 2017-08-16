@@ -36,7 +36,11 @@ QUnit.test("test: purchase order", function(assert) {
 			assert.ok(cur_frm.doc.contact_email == 'test@supplier.com', "Contact email correct");
 			// Get item details
 			assert.ok(cur_frm.doc.items[0].item_name == 'Test Product 4', "Item name correct");
+<<<<<<< HEAD
 			assert.ok(cur_frm.doc.items[0].description == 'Test Product 4', "Description correct")
+=======
+			assert.ok(cur_frm.doc.items[0].description == 'Test Product 4', "Description correct");
+>>>>>>> f6544e95d41e38416e4a9f5d43ff382704a681d0
 			assert.ok(cur_frm.doc.items[0].qty == 5, "Quantity correct");
 			// Calculate total
 			assert.ok(cur_frm.doc.total == 500, "Total correct");

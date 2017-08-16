@@ -39,7 +39,11 @@ QUnit.test("test: purchase order with get items", function(assert) {
 		() => frappe.click_button('Get Items'),
 		() => frappe.timeout(1),
 
+<<<<<<< HEAD
 		//Check if items are fetched from Product Bundle
+=======
+		// Check if items are fetched from Product Bundle
+>>>>>>> f6544e95d41e38416e4a9f5d43ff382704a681d0
 		() => {
 			assert.ok(cur_frm.doc.items[1].item_name == 'CPU', "Product bundle item 1 correct");
 			assert.ok(cur_frm.doc.items[2].item_name == 'Screen', "Product bundle item 2 correct");
