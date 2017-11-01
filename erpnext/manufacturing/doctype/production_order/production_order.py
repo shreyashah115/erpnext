@@ -607,11 +607,8 @@ def make_new_timesheet(source_name, target_doc=None):
 	po = frappe.get_doc('Production Order', source_name)
 	ts = po.make_time_logs(open_new=True)
 	if not ts or not ts.get('time_logs'):
-		x = frappe.db.get_value("Timesheet",{"production_order": source_name}, 'name')
-		# y = getlink("ts", x)
-		# frappe.errprint(y)
-		timesheet = (getlink('Timesheet', x))
-		# frappe.throw(_(timesheet))
+		ts_name = frappe.db.get_value("Timesheet",{"production_order": source_name}, 'name')
+		timesheet = (getlink('Timesheet', ts_name))
 		frappe.throw(_("Already Completed:") + "\n" + timesheet)
 	return ts
 
