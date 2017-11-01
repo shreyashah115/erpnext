@@ -312,7 +312,6 @@ class ProductionOrder(Document):
 		if timesheet and timesheet.get("time_logs"):
 			timesheet.save()
 			timesheets.append(getlink("Timesheet", timesheet.name))
-
 		self.planned_end_date = self.operations[-1].planned_end_time
 		if timesheets:
 			frappe.local.message_log = []
@@ -602,6 +601,19 @@ def get_default_warehouse():
 	fg_warehouse = frappe.db.get_single_value("Manufacturing Settings",
 		"default_fg_warehouse")
 	return {"wip_warehouse": wip_warehouse, "fg_warehouse": fg_warehouse}
+
+@frappe.whitelist()
+def make_new_timesheet(source_name, target_doc=None):
+	po = frappe.get_doc('Production Order', source_name)
+	ts = po.make_time_logs(open_new=True)
+	if not ts or not ts.get('time_logs'):
+		x = frappe.db.get_value("Timesheet",{"production_order": source_name}, 'name')
+		# y = getlink("ts", x)
+		# frappe.errprint(y)
+		timesheet = (getlink('Timesheet', x))
+		# frappe.throw(_(timesheet))
+		frappe.throw(_("Already Completed:") + "\n" + timesheet)
+	return ts
 
 @frappe.whitelist()
 def stop_unstop(production_order, status):
