@@ -40,63 +40,6 @@ erpnext.setup.slides_settings = [
 	},
 
 	{
-		// Brand
-		name: 'brand',
-		domains: ["all"],
-		icon: "fa fa-bookmark",
-		title: __("The Brand"),
-		// help: __('Upload your letter head and logo. (you can edit them later).'),
-		fields: [
-			{
-				fieldtype: "Attach Image", fieldname: "attach_logo",
-				label: __("Attach Logo"),
-				description: __("100px by 100px"),
-				is_private: 0,
-				align: 'center'
-			},
-			{
-				fieldname: 'company_name',
-				label: frappe.setup.domain === 'Education' ?
-					__('Institute Name') : __('Company Name'),
-				fieldtype: 'Data',
-				reqd: 1
-			},
-			{
-				fieldname: 'company_abbr',
-				label: frappe.setup.domain === 'Education' ?
-					__('Institute Abbreviation') : __('Company Abbreviation'),
-				fieldtype: 'Data'
-			}
-		],
-		onload: function(slide) {
-			this.bind_events(slide);
-		},
-		bind_events: function (slide) {
-			slide.get_input("company_name").on("change", function () {
-				var parts = slide.get_input("company_name").val().split(" ");
-				var abbr = $.map(parts, function (p) { return p ? p.substr(0, 1) : null }).join("");
-				slide.get_field("company_abbr").set_value(abbr.slice(0, 5).toUpperCase());
-			}).val(frappe.boot.sysdefaults.company_name || "").trigger("change");
-
-			slide.get_input("company_abbr").on("change", function () {
-				if (slide.get_input("company_abbr").val().length > 5) {
-					frappe.msgprint("Company Abbreviation cannot have more than 5 characters");
-					slide.get_field("company_abbr").set_value("");
-				}
-			});
-		},
-		validate: function() {
-			if ((this.values.company_name || "").toLowerCase() == "company") {
-				frappe.msgprint(__("Company Name cannot be Company"));
-				return false;
-			}
-			if (!this.values.company_abbr) {
-				return false;
-			}
-			return true;
-		}
-	},
-	{
 		// Organisation
 		name: 'organisation',
 		domains: ["all"],
