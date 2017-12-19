@@ -103,18 +103,30 @@ frappe.ui.form.on("Timesheet", {
 	},
 
 	is_team: function(frm) {
-		if (frm.doc.is_team) {
-			frm.doc.team = null;
-			frm.doc.employee = null;
-			frm.doc.employee_name = null;
-			frm.toggle_display("employee_name", false);
-			frm.toggle_display("team_details", true);
-		}
-		else {
-			frm.doc.team = null;
-			frm.doc.team_details = [];
+		if (!frm.doc.is_team) {
+			// frm.toggle_display("team_details", false);
 			frm.toggle_display("employee_name", true);
-			frm.toggle_display("team_details", false);
+			frm.doc.team_details = [];
+			frm.doc.team = null;
+		}
+		// else if (frm.doc.team) {
+		// 	frm.toggle_display("team_details", true);
+		// }
+		else {
+			frm.doc.employee = null;
+			frm.toggle_display("employee_name", true );
+		}
+	},
+
+	on_submit: function(frm) {
+		if (frm.doc.is_team && frm.doc.team_details) {
+			$.each(frm.doc.team_details, function(i, d) {
+				console.log(d.employee);
+				frappe.model.open_mapped_doc({
+					method: "erpnext.projects.doctype.timesheet.timesheet.make_individual_timesheet",
+					frm: this.frm
+				})
+			})
 		}
 	},
 

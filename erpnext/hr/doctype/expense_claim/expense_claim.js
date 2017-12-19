@@ -271,6 +271,7 @@ frappe.ui.form.on("Expense Claim", {
 				frappe.model.clear_table(frm.doc, "advances");
 				if(r.message) {
 					$.each(r.message, function(i, d) {
+						console.log(r.message);
 						var row = frappe.model.add_child(frm.doc, "Expense Claim Advance", "advances");
 						row.employee_advance = d.name;
 						row.posting_date = d.posting_date;
