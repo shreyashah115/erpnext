@@ -90,12 +90,54 @@ frappe.ui.form.on("Timesheet", {
 		dialog.show();
 	},
 
+	team: function(frm) {
+		frm.doc.team_details = [];
+		frm.events.get_team(frm);
+	},
+
 	make_salary_slip: function(frm) {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.projects.doctype.timesheet.timesheet.make_salary_slip",
 			frm: frm
 		});
 	},
+
+	is_team: function(frm) {
+		if (frm.doc.is_team) {
+			frm.doc.team = null;
+			frm.doc.employee = null;
+			frm.doc.employee_name = null;
+			frm.toggle_display("employee_name", false);
+			frm.toggle_display("team_details", true);
+		}
+		else {
+			frm.doc.team = null;
+			frm.doc.team_details = [];
+			frm.toggle_display("employee_name", true);
+			frm.toggle_display("team_details", false);
+		}
+	},
+
+	get_team: function(frm) {
+		return frappe.call({
+			method: "frappe.client.get",
+			args: {
+				doctype: "Team",
+				name: frm.doc.team
+			},
+			callback: function(r, rt) {
+				frappe.model.clear_table(frm.doc, "team_details");
+				if(r.message) {
+					$.each(r.message.employee, function(i, d) {
+						var row = frappe.model.add_child(frm.doc, "Employee Team", "team_details");
+						row.employee = d.employee;
+						row.employee_name = d.employee_name;
+					});
+					refresh_field("team_details");
+				}
+			}
+		});
+	}
 })
 
 frappe.ui.form.on("Timesheet Detail", {
