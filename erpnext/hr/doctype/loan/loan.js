@@ -44,10 +44,14 @@ frappe.ui.form.on('Loan', {
 				frm.trigger("make_jv");
 			})
 		}
-		if (frm.doc.docstatus == 1 && (frm.doc.applicant_type == 'Member' || frm.doc.repay_from_salary == 0)) {
+		if (frm.doc.docstatus == 1 && frm.doc.disbursement_date && (frm.doc.applicant_type == 'Member' || frm.doc.repay_from_salary == 0)) {
 			frm.add_custom_button(__('Make Repayment Entry'), function() {
 				frm.trigger("make_repayment_entry");
 			})
+		}
+		if (frm.doc.disbursement_date) {
+			frm.doc.repayment_schedule[0].payment_date = frm.doc.disbursement_date;
+			frm.refresh_field("repayment_schedule");
 		}
 		frm.trigger("toggle_fields");
 	},
@@ -220,7 +224,7 @@ var _make_repayment_entry = function(frm, payment_rows) {
 		callback: function(r) {
 			if (r.message)
 				var doc = frappe.model.sync(r.message)[0];
-			frappe.set_route("Form", doc.doctype, doc.name);
+			frappe.set_route("Form", doc.doctype, doc.name, {'payment_rows': payment_rows});
 		}
 	});
 }
