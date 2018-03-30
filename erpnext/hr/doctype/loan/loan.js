@@ -130,17 +130,17 @@ frappe.ui.form.on('Loan', {
 		// (payment.payment_date <= frappe.datetime.nowdate() || payment.payment_date == undefined) && 
 		if (frm.doc['repayment_schedule']) {
 			frm.doc['repayment_schedule'].forEach((payment, index) => {
-			if (payment.paid == 0 && payment.payment_date != undefined) {
+			if (payment.paid == 0 && payment.payment_date <= frappe.datetime.now_date()) {
 					frm.repayment_data.push ({
-						'id': payment.idx,
-						'name': index,
+						'id': index,
+						'name': payment.name,
 						'payment_date': payment.payment_date,
 						'principal_amount': payment.principal_amount,
 						'interest_amount': payment.interest_amount,
 						'total_payment': payment.total_payment 
 					});
 					dialog.fields_dict.payments.grid.refresh();
-					$(dialog.wrapper.find(".grid-add-row")).hide();
+					$(dialog.wrapper.find(".grid-buttons")).hide();
 					$(`.octicon.octicon-triangle-down`).hide();
 				}
 

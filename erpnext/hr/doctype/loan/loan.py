@@ -21,7 +21,10 @@ class Loan(AccountsController):
 			self.rate_of_interest = frappe.db.get_value("Loan Type", self.loan_type, "rate_of_interest")
 		if self.repayment_method == "Repay Over Number of Periods":
 			self.monthly_repayment_amount = get_monthly_repayment_amount(self.repayment_method, self.loan_amount, self.rate_of_interest, self.repayment_periods)
-
+    	if self.status == "Fully Disbursed" and not self.disbursement_date:
+            self.disbursement_date = nowdate()
+    	if self.status == "Repaid/Closed":
+			self.total_amount_paid = self.total_payment
 		self.make_repayment_schedule()
 		self.set_repayment_period()
 		self.calculate_totals()
@@ -103,7 +106,7 @@ def update_total_amount_paid(doc):
 	if flt(paid_amount) > doc.total_payment:
 		frappe.throw(_("Total Payment Amount cannot be greater than total payment."))
 
-	frappe.db.set_value("Loan", doc.name, "total_amount_paid", paid_amount)
+	frappe.db.set_value("Loan", doc.name, "total_amount_paid", paid_amount.paid_amount)
 
 def update_disbursement_status(doc):
 	disbursement = frappe.db.sql("""select posting_date, ifnull(sum(credit_in_account_currency), 0) as disbursed_amount 
@@ -156,7 +159,8 @@ def make_repayment_entry(payment_rows, loan, company, loan_account, applicant_ty
 		frappe.throw(_("No repayments available for Journal Entry"))
 
 	if payment_rows_list:
-		row_id = list(set(d["idx"] for d in payment_rows_list))
+		row_id = list(set(d["name"] for d in payment_rows_list))
+		frappe.errprint(row_id)
 	else:
 		frappe.throw(_("No repayments selected for Journal Entry"))
 	total_payment = 0
