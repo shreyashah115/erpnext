@@ -20,8 +20,5 @@ frappe.ui.form.on('Department', {
 				}
 			}
 		});
-	},
-	refresh: function(frm) {
-
 	}
 });
