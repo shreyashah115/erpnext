@@ -78,7 +78,6 @@ cur_frm.cscript.refresh = function(doc) {
 				entry_reference_doctype = "Payment Entry Reference.reference_doctype";
 				entry_reference_name = "Payment Entry Reference.reference_name";
 			}
-
 			if (cint(doc.total_amount_reimbursed) > 0 && frappe.model.can_read(entry_doctype)) {
 				cur_frm.add_custom_button(__('Bank Entries'), function() {
 					frappe.route_options = {
@@ -156,6 +155,17 @@ frappe.ui.form.on("Expense Claim", {
 		});
 	},
 
+	onload: function(frm) {
+		frm.set_query("expense_approver", function() {
+			return {
+				query: "erpnext.hr.doctype.expense_claim.expense_claim.get_approvers",
+				filters: {
+					employee: frm.doc.employee
+				}
+			};
+		});
+	},
+
 	refresh: function(frm) {
 		frm.trigger("toggle_fields");
 
@@ -176,6 +186,11 @@ frappe.ui.form.on("Expense Claim", {
 			frm.add_custom_button(__('Payment'),
 				function() { frm.events.make_payment_entry(frm); }, __("Make"));
 		}
+		frappe.db.get_value('HR Settings', {name: 'HR Settings'}, 'expense_approver_mandatory_in_expense_claim', (r) => {
+			if (frm.doc.docstatus < 1 && (r.expense_approver_mandatory_in_expense_claim == 0)) {
+				frm.toggle_reqd("expense_approver", false);
+			}
+		});
 	},
 
 	make_payment_entry: function(frm) {
