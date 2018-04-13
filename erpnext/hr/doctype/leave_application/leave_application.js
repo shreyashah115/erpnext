@@ -39,19 +39,6 @@ frappe.ui.form.on("Leave Application", {
 		});
 	},
 
-	make_dashboard: function(frm) {
-		var flag = true;
-		if (flag) {
-			let section = frm.dashboard.add_section(
-				frappe.render_template('leave_application_dashboard', {
-					data: frm.doc
-				})
-			);
-			frm.dashboard.show();
-			flag = false;
-		}
-	},
-
 	leave_approver: function(frm) {
 		if(frm.doc.leave_approver){
 			frm.set_value("leave_approver_name", frappe.user.full_name(frm.doc.leave_approver));
@@ -60,8 +47,6 @@ frappe.ui.form.on("Leave Application", {
 
 	employee: function(frm) {
 		frm.trigger("get_leave_balance");
-		frm.trigger("make_dashboard");
-
 	},
 
 	leave_type: function(frm) {
