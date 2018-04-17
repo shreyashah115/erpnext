@@ -45,4 +45,15 @@ frappe.ui.form.on("Supplier", {
 			erpnext.utils.set_party_dashboard_indicators(frm);
 		}
 	},
+	represents_company: function(frm) {
+		if (frm.doc.represents_company) {
+			frm.set_query('company', 'companies', function() {
+				return {
+					"filters": {
+						"name": ["!=", frm.doc.represents_company]
+					}
+				}
+			});
+		}
+	}
 });

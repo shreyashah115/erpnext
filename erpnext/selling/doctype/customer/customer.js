@@ -103,12 +103,13 @@ frappe.ui.form.on("Customer", {
 	validate: function(frm) {
 		if(frm.doc.lead_name) frappe.model.clear_doc("Lead", frm.doc.lead_name);
 	},
-	company: function(frm) {
-		if(frm.doc.company) {
-			frm.set_query('company', 'allowed_to_transact_with', function(doc) {
+	represents_company: function(frm) {
+		if (frm.doc.represents_company) {
+			console.log('here 2');
+			frm.set_query('company', 'companies', function() {
 				return {
 					"filters": {
-						"name": ["!=", doc.company]
+						"name": ["!=", frm.doc.represents_company]
 					}
 				}
 			});
