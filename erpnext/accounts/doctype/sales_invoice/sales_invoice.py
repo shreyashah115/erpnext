@@ -992,3 +992,68 @@ def set_account_for_mode_of_payment(self):
 	for data in self.payments:
 		if not data.account:
 			data.account = get_bank_cash_account(data.mode_of_payment, self.company).get("account")
+
+@frappe.whitelist()
+def get_allowed_companies(customer=None, supplier=None):
+	if customer:
+		parent = customer
+		parenttype = "Customer"
+	elif supplier:
+		parent = supplier
+		parenttype = "Supplier"
+	companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
+		where parenttype = '{0}' and parent = '{1}'""".format(parenttype, parent), as_list = 1)
+	companies = [company[0] for company in companies]
+	return companies
+
+@frappe.whitelist()
+def make_inter_company_invoice(source_name, target_doc=None):
+	from frappe.model.mapper import get_mapped_doc
+	# frappe.errprint(source_name)
+	# def set_missing_values(source, target):
+	# 	doc = frappe.get_doc(target)
+
+	# 	# for tax in doc.get("taxes"):
+	# 	# 	if tax.charge_type == "Actual":
+	# 	# 		tax.tax_amount = -1 * tax.tax_amount
+
+	# 	# doc.discount_amount = -1 * source.discount_amount
+	# 	doc.run_method("calculate_taxes_and_totals")
+	# def update_price_list(source_doc, target_doc, source_parent):
+	# 	if source_doc.selling_price_list:
+	# 		buying = frappe.get_doc("Price List", source_doc.selling_price_list, "buying")
+	# 		if buying == 1:
+	# 			target_doc.buying_price_list = source_doc.selling_price_list
+	# 		else:
+	# 			target_doc.buying_price_list = ""
+	# 		frappe.errprint(target_doc.buying_price_list)
+	# def update_item(source_doc, target_doc, source_parent):
+
+	# 	target_doc.income_account = ""
+	# 	target_doc.expense_account = ""
+	# 	target_doc.cost_center = ""
+
+	base_doc = "Sales Invoice"
+	doctype = "Purchase Invoice"
+	doclist = get_mapped_doc(base_doc, source_name,	{
+		"Sales Invoice": {
+			"doctype": doctype,
+			"validation": {
+				"docstatus": ["=", 1]
+			},
+			# "postprocess": update_price_list
+		},
+		"Sales Invoice Item": {
+			"doctype": doctype + " Item",
+			# "field_map": {
+			# 	"serial_no": "serial_no",
+			# 	"batch_no": "batch_no"
+			# },
+			# "postprocess": update_item
+		}
+		# "Payment Schedule": {
+		# 	"doctype": "Payment Schedule"
+		# }
+	}, target_doc)
+
+	return doclist

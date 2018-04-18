@@ -101,6 +101,15 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 		}
 
 		this.set_default_print_format();
+		if (doc.docstatus == 1) {
+			frappe.db.get_value('Customer', {name: this.frm.doc.customer}, 'is_internal_customer', (r) => {
+				if (r && r.is_internal_customer) {
+					this.frm.add_custom_button("Inter Company Invoice", function() {
+						me.frm.trigger("inter_company_invoice");
+				}, __("Make"));
+				}
+			});
+		}
 	},
 
 	on_submit: function(doc, dt, dn) {
@@ -213,11 +222,41 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 	tc_name: function() {
 		this.get_terms();
 	},
-
 	customer: function() {
 		var me = this;
+		let internal;
+		frappe.db.get_value('Customer', {name: this.frm.doc.customer}, 'is_internal_customer', (r) => {
+			if (r) {
+				internal = r.is_internal_customer;
+			}
+			if (internal == 1) {
+				frappe.call({
+					method:"erpnext.accounts.doctype.sales_invoice.sales_invoice.get_allowed_companies",
+					args: {customer: this.frm.doc.customer},
+					callback: function(r){
+						if (r.message){
+							if (me.frm.doc.company) {
+								me.frm.set_value("company", r.message[0]);
+							}
+							me.frm.set_query('company', function() {
+								return {
+									"filters": {"name": ["in", r.message]}
+									}
+								}
+							);
+						}
+					}
+				});
+			}
+			else {
+				me.frm.set_query('company', function(){
+					return {
+						"filters": {"name": ["like", "%" + "" + "%"]}
+					}
+				});
+			}
+		});
 		if(this.frm.updating_party_details) return;
-
 		erpnext.utils.get_party_details(this.frm,
 			"erpnext.accounts.party.get_party_details", {
 				posting_date: this.frm.doc.posting_date,
@@ -228,6 +267,13 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 			}, function() {
 				me.apply_pricing_rule();
 			})
+	},
+	
+	inter_company_invoice: function() {
+		frappe.model.open_mapped_doc({
+			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_inter_company_invoice",
+			frm: cur_frm
+		})
 	},
 
 	debit_to: function() {
