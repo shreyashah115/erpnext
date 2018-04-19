@@ -237,7 +237,7 @@
    "search_index": 0, 
    "set_only_once": 0, 
    "translatable": 0, 
-   "unique": 0
+   "unique": 1
   }, 
   {
    "allow_bulk_edit": 0, 
@@ -1163,7 +1163,7 @@
  "issingle": 0, 
  "istable": 0, 
  "max_attachments": 0, 
- "modified": "2018-04-17 15:41:12.748197", 
+ "modified": "2018-04-19 12:19:52.519026", 
  "modified_by": "Administrator", 
  "module": "Buying", 
  "name": "Supplier", 
