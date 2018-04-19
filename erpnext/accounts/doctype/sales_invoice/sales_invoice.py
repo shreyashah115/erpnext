@@ -73,6 +73,7 @@ class SalesInvoice(SellingController):
 		self.validate_account_for_change_amount()
 		self.validate_fixed_asset()
 		self.set_income_account_for_fixed_assets()
+		self.validate_inter_company_customer()
 
 		if cint(self.is_pos):
 			self.validate_pos()
@@ -150,6 +151,21 @@ class SalesInvoice(SellingController):
 	def validate_pos_paid_amount(self):
 		if len(self.payments) == 0 and self.is_pos:
 			frappe.throw(_("At least one mode of payment is required for POS invoice."))
+
+	def validate_inter_company_customer(self):
+		if frappe.db.get_value("Customer", self.customer, "is_internal_customer") == 1:
+			if self.inter_company_invoice_reference:
+				doc = frappe.get_doc("Purchase Invoice", self.inter_company_invoice_reference)
+				if not frappe.db.get_value("Customer", {"represents_company": doc.company}, "name") == self.customer:
+					frappe.throw(_("Invalid Customer for Inter Company Invoice"))
+				if not frappe.db.get_value("Supplier", {"name": doc.supplier}, "represents_company") == self.company:
+					frappe.throw(_("Invalid Company for Inter Company Invoice"))
+			else:
+				companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
+					where parenttype = "Customer" and parent = '{0}'""".format(self.customer), as_list = 1)
+				companies = [company[0] for company in companies]
+				if not self.company in companies:
+					frappe.throw(_("Customer not allowed to transact with {0}. Please change the Company.").format(self.company))
 
 	def before_cancel(self):
 		self.update_time_sheet(None)
@@ -993,67 +1009,97 @@ def set_account_for_mode_of_payment(self):
 		if not data.account:
 			data.account = get_bank_cash_account(data.mode_of_payment, self.company).get("account")
 
-def get_inter_company_details(doc):
-	supplier = frappe.db.get_value("Supplier", {"is_internal_supplier":1, "represents_company": doc.get("company")}, "name")
-	company = frappe.db.get_value("Customer", {"name": doc.get("customer")}, "represents_company")
+def get_inter_company_details(doc, doctype):
+	if doctype == "Sales Invoice":
+		party = frappe.db.get_value("Supplier", {"is_internal_supplier":1, "represents_company": doc.get("company")}, "name")
+		company = frappe.db.get_value("Customer", {"name": doc.get("customer")}, "represents_company")
+	else:
+		party = frappe.db.get_value("Customer", {"is_internal_customer":1, "represents_company": doc.get("company")}, "name")
+		company = frappe.db.get_value("Customer", {"name": doc.get("supplier")}, "represents_company")
 
 	return {
-		"supplier": supplier, 
+		"party": party, 
 		"company": company
 	}
 
 @frappe.whitelist()
 def validate_inter_company_invoice(doc):
 	doc = json.loads(doc)
-	details = get_inter_company_details(doc)
+	doctype = doc.get("doctype")
+	details = get_inter_company_details(doc, doctype)
+	if doctype == "Sales Invoice":
+		buying = frappe.db.get_value("Price List", doc.get("selling_price_list"), "buying")
+		if not buying:
+			frappe.throw(_("Buying and Selling Price List should be same for Inter Company Transactions."))
 
-	companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
-		where parenttype = "Customer" and parent = '{0}'""".format(doc.get("customer"), as_list = 1))
-	companies = [company[0] for company in companies]
-	if not doc.get("company") in companies:
-		frappe.throw(_("Customer not allowed to transact with {0}").format(doc.get("company")))
+		supplier = details.get("party")
+		if not supplier:
+			frappe.throw(_("No Supplier found for Inter Company Transactions."))
 
-	buying = frappe.db.get_value("Price List", doc.get("selling_price_list"), "buying")
-	if not buying:
-		frappe.throw(_("Buying and Selling Price List should be same for Inter Company Transactions."))
+		company = details.get("company")
+		default_currency = frappe.db.get_value("Company", company, "default_currency")
+		if default_currency != doc.get("currency"):
+			frappe.throw(_("Company currencies of both the companies should match for Inter Company Transactions."))
+	
+	else:
+		selling = frappe.db.get_value("Price List", doc.get("buying_price_list"), "selling")
+		if not selling:
+			frappe.throw(_("Buying and Selling Price List should be same for Inter Company Transactions."))
 
-	supplier = details.get("supplier")
-	if not supplier:
-		frappe.throw(_("No supplier found for Inter Company Transactions."))
+		customer = details.get("party")
+		if not customer:
+			frappe.throw(_("No Customer found for Inter Company Transactions."))
 
-	company = details.get("company")
-	default_currency = frappe.db.get_value("Company", company, "default_currency")
-	if default_currency != doc.get("currency"):
-		frappe.throw(_("Company currencies of both the companies should match for Inter Company Transactions."))
+		company = details.get("company")
+		default_currency = frappe.db.get_value("Company", company, "default_currency")
+		if default_currency != doc.get("currency"):
+			frappe.throw(_("Company currencies of both the companies should match for Inter Company Transactions."))
 
-	return company, supplier
+	return company
 
 @frappe.whitelist()
-def make_inter_company_invoice(source_name, target_doc=None):
+def make_inter_company_purchase_invoice(source_name, target_doc=None):
+	return make_inter_company_invoice("Sales Invoice", source_name, target_doc)
+
+def make_inter_company_invoice(doctype, source_name, target_doc=None):
 	from frappe.model.mapper import get_mapped_doc
-	source_doc = frappe.get_doc("Sales Invoice", source_name)
-	details = get_inter_company_details(source_doc)
+	if doctype == "Sales Invoice":
+		source_doc = frappe.get_doc("Sales Invoice", source_name)
+		target_doctype = "Purchase Invoice"
+	else:
+		source_doc = frappe.get_doc("Purchase Invoice", source_name)
+		target_doctype = "Sales Invoice"
+
+	details = get_inter_company_details(source_doc, doctype)
+
 	def set_missing_values(source, target):
 		target.run_method("set_missing_values")
-	def update_purchase_details(source_doc, target_doc, source_parent):
-		target_doc.company = details.get("company")
-		target_doc.supplier = details.get("supplier")
-		target_doc.buying_price_list = source_doc.selling_price_list
-	def update_item(source_doc, target_doc, source_parent):
 
+	def update_details(source_doc, target_doc, source_parent):
+		target_doc.inter_company_invoice_reference = source_doc.name
+		if target_doc.doctype == "Purchase Invoice":
+			target_doc.company = details.get("company")
+			target_doc.supplier = details.get("party")
+			target_doc.buying_price_list = source_doc.selling_price_list
+		else:
+			target_doc.company = details.get("company")
+			target_doc.customer = details.get("party")
+			target_doc.selling_price_list = source_doc.buying_price_list
+
+	def update_item(source_doc, target_doc, source_parent):
 		target_doc.income_account = ""
 		target_doc.expense_account = ""
 		target_doc.cost_center = ""
 
 	base_doc = "Sales Invoice"
-	doctype = "Purchase Invoice"
-	doclist = get_mapped_doc(base_doc, source_name,	{
-		"Sales Invoice": {
-			"doctype": doctype,
-			"postprocess": update_purchase_details
+	target_doctype = "Purchase Invoice"
+	doclist = get_mapped_doc(doctype, source_name,	{
+		doctype: {
+			"doctype": target_doctype,
+			"postprocess": update_details
 		},
-		"Sales Invoice Item": {
-			"doctype": doctype + " Item",
+		doctype +" Item": {
+			"doctype": target_doctype + " Item",
 			"postprocess": update_item
 		}
 
