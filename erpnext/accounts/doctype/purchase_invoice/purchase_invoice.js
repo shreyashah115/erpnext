@@ -191,7 +191,7 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 
 	make_inter_company_invoice: function(frm) {
 		frappe.model.open_mapped_doc({
-			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_inter_company_invoice",
+			method: "erpnext.accounts.doctype.purchase_invoice.purchase_invoice.make_inter_company_sales_invoice",
 			frm: frm
 		});
 	},

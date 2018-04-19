@@ -120,20 +120,20 @@ class PurchaseInvoice(BuyingController):
 
 		self.party_account_currency = account.account_currency
 
-	def validate_inter_company_invoice(self):
+	def validate_inter_company_supplier(self):
 		if frappe.db.get_value("Supplier", self.supplier, "is_internal_supplier") == 1:
-			companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
-				where parenttype = "Supplier" and parent = '{0}'""".format(self.supplier), as_list = 1)
-			companies = [company[0] for company in companies]
-			if not self.company in companies:
-				frappe.throw(_("Supplier not allowed to transact with {0}. Please change the Company.").format(self.company))
-	
 			if self.inter_company_invoice_reference:
 				doc = frappe.get_doc("Sales Invoice", self.inter_company_invoice_reference)
 				if not frappe.db.get_value("Supplier", {"represents_company": doc.company}, "name") == self.supplier:
 					frappe.throw(_("Invalid Supplier for Inter Company Invoice"))
-				if not frappe.db.get_value("Customer", {"name: "doc.customer}, "represents_company") == self.company:
+				if not frappe.db.get_value("Customer", {"name": doc.customer}, "represents_company") == self.company:
 					frappe.throw(_("Invalid Company for Inter Company Invoice"))
+			else:
+				companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
+					where parenttype = "Supplier" and parent = '{0}'""".format(self.supplier), as_list = 1)
+				companies = [company[0] for company in companies]
+				if not self.company in companies:
+					frappe.throw(_("Supplier not allowed to transact with {0}. Please change the Company.").format(self.company))
 
 	def check_for_closed_status(self):
 		check_list = []
@@ -760,3 +760,8 @@ def make_stock_entry(source_name, target_doc=None):
 	}, target_doc)
 
 	return doc
+
+@frappe.whitelist()
+def make_inter_company_sales_invoice(source_name, target_doc=None):
+	from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_inter_company_invoice
+	return make_inter_company_invoice("Purchase Invoice", source_name, target_doc)
