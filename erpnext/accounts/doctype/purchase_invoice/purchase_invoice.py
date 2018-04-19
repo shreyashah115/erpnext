@@ -73,6 +73,7 @@ class PurchaseInvoice(BuyingController):
 		self.validate_fixed_asset_account()
 		self.create_remarks()
 		self.set_status()
+		self.validate_inter_company_supplier()
 
 	def validate_cash(self):
 		if not self.cash_bank_account and flt(self.paid_amount):
@@ -118,6 +119,21 @@ class PurchaseInvoice(BuyingController):
 			frappe.throw(_("Credit To account must be a Payable account"))
 
 		self.party_account_currency = account.account_currency
+
+	def validate_inter_company_invoice(self):
+		if frappe.db.get_value("Supplier", self.supplier, "is_internal_supplier") == 1:
+			companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
+				where parenttype = "Supplier" and parent = '{0}'""".format(self.supplier), as_list = 1)
+			companies = [company[0] for company in companies]
+			if not self.company in companies:
+				frappe.throw(_("Supplier not allowed to transact with {0}. Please change the Company.").format(self.company))
+	
+			if self.inter_company_invoice_reference:
+				doc = frappe.get_doc("Sales Invoice", self.inter_company_invoice_reference)
+				if not frappe.db.get_value("Supplier", {"represents_company": doc.company}, "name") == self.supplier:
+					frappe.throw(_("Invalid Supplier for Inter Company Invoice"))
+				if not frappe.db.get_value("Customer", {"name: "doc.customer}, "represents_company") == self.company:
+					frappe.throw(_("Invalid Company for Inter Company Invoice"))
 
 	def check_for_closed_status(self):
 		check_list = []
@@ -297,6 +313,10 @@ class PurchaseInvoice(BuyingController):
 			self.update_stock_ledger()
 			from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
 			update_serial_nos_after_submit(self, "items")
+
+		if self.inter_company_invoice_reference:
+			frappe.db.set_value("Sales Invoice", self.inter_company_invoice_reference,\
+				"inter_company_invoice_reference", self.name)
 
 		# this sequence because outstanding may get -negative
 		self.make_gl_entries()
@@ -634,6 +654,12 @@ class PurchaseInvoice(BuyingController):
 		self.update_project()
 		self.update_fixed_asset()
 		frappe.db.set(self, 'status', 'Cancelled')
+
+		if self.inter_company_invoice_reference:
+			frappe.db.set_value("Purchase Invoice", self.name,\
+				"inter_company_invoice_reference", "")
+			frappe.db.set_value("Sales Invoice", self.inter_company_invoice_reference,\
+				"inter_company_invoice_reference", "")
 
 	def update_project(self):
 		project_list = []
