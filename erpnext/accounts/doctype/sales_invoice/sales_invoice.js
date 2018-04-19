@@ -102,7 +102,7 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 
 		this.set_default_print_format();
 		var me = this;
-		if (doc.docstatus == 1) {
+		if (doc.docstatus == 1 && !doc.inter_company_invoice_reference) {
 			frappe.model.with_doc("Customer", me.frm.doc.customer, function() {
 				var customer = frappe.model.get_doc("Customer", me.frm.doc.customer);
 				var internal = customer.is_internal_customer;
@@ -227,37 +227,6 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 	},
 	customer: function() {
 		var me = this;
-		// frappe.db.get_value('Customer', {name: this.frm.doc.customer}, 'is_internal_customer', (r) => {
-		// 	if (r) {
-		// 		internal = r.is_internal_customer;
-		// 	}
-		// 	if (internal == 1) {
-		// 		frappe.call({
-		// 			method:"erpnext.accounts.doctype.sales_invoice.sales_invoice.get_allowed_companies",
-		// 			args: {customer: this.frm.doc.customer},
-		// 			callback: function(r){
-		// 				if (r.message){
-		// 					if (me.frm.doc.company) {
-		// 						me.frm.set_value("company", r.message[0]);
-		// 					}
-		// 					me.frm.set_query('company', function() {
-		// 						return {
-		// 							"filters": {"name": ["in", r.message]}
-		// 							}
-		// 						}
-		// 					);
-		// 				}
-		// 			}
-		// 		});
-		// 	}
-		// 	else {
-		// 		me.frm.set_query('company', function(){
-		// 			return {
-		// 				"filters": {"name": ["like", "%" + "" + "%"]}
-		// 			}
-		// 		});
-			// }
-		// });
 		if(this.frm.updating_party_details) return;
 		erpnext.utils.get_party_details(this.frm,
 			"erpnext.accounts.party.get_party_details", {
@@ -281,12 +250,12 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 					me.make_inter_company_invoice(frm);
 				}
 			}
-		})
-
+		});
 	},
+
 	make_inter_company_invoice: function(frm) {
 		frappe.model.open_mapped_doc({
-			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_inter_company_invoice",
+			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_inter_company_purchase_invoice",
 			frm: frm
 		});
 	},

@@ -147,6 +147,7 @@ class SalesInvoice(SellingController):
 
 		update_company_current_month_sales(self.company)
 		self.update_project()
+		self.update_linked_invoice()
 
 	def validate_pos_paid_amount(self):
 		if len(self.payments) == 0 and self.is_pos:
@@ -166,6 +167,11 @@ class SalesInvoice(SellingController):
 				companies = [company[0] for company in companies]
 				if not self.company in companies:
 					frappe.throw(_("Customer not allowed to transact with {0}. Please change the Company.").format(self.company))
+
+	def update_linked_invoice(self):
+		if self.inter_company_invoice_reference:
+			frappe.db.set_value("Purchase Invoice", self.inter_company_invoice_reference,\
+				"inter_company_invoice_reference", self.name)
 
 	def before_cancel(self):
 		self.update_time_sheet(None)
@@ -201,6 +207,8 @@ class SalesInvoice(SellingController):
 
 		update_company_current_month_sales(self.company)
 		self.update_project()
+
+		self.unlink_inter_company_invoice()
 
 	def update_status_updater_args(self):
 		if cint(self.update_stock):
@@ -922,6 +930,13 @@ class SalesInvoice(SellingController):
 			project.flags.dont_sync_tasks = True
 			project.update_billed_amount()
 			project.save()
+
+	def unlink_inter_company_invoice(self):
+		if self.inter_company_invoice_reference:
+			frappe.db.set_value("Sales Invoice", self.name,\
+				"inter_company_invoice_reference", "")
+			frappe.db.set_value("Purchase Invoice", self.inter_company_invoice_reference,\
+				"inter_company_invoice_reference", "")
 
 	def verify_payment_amount_is_positive(self):
 		for entry in self.payments:

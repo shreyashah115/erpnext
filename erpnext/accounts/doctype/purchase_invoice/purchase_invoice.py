@@ -314,15 +314,17 @@ class PurchaseInvoice(BuyingController):
 			from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
 			update_serial_nos_after_submit(self, "items")
 
-		if self.inter_company_invoice_reference:
-			frappe.db.set_value("Sales Invoice", self.inter_company_invoice_reference,\
-				"inter_company_invoice_reference", self.name)
-
 		# this sequence because outstanding may get -negative
 		self.make_gl_entries()
 
 		self.update_project()
 		self.update_fixed_asset()
+		self.update_linked_invoice()
+
+	def update_linked_invoice(self):
+		if self.inter_company_invoice_reference:
+			frappe.db.set_value("Sales Invoice", self.inter_company_invoice_reference,\
+				"inter_company_invoice_reference", self.name)
 
 	def update_fixed_asset(self):
 		for d in self.get("items"):
@@ -655,11 +657,7 @@ class PurchaseInvoice(BuyingController):
 		self.update_fixed_asset()
 		frappe.db.set(self, 'status', 'Cancelled')
 
-		if self.inter_company_invoice_reference:
-			frappe.db.set_value("Purchase Invoice", self.name,\
-				"inter_company_invoice_reference", "")
-			frappe.db.set_value("Sales Invoice", self.inter_company_invoice_reference,\
-				"inter_company_invoice_reference", "")
+		self.unlink_inter_company_invoice()
 
 	def update_project(self):
 		project_list = []
@@ -697,6 +695,13 @@ class PurchaseInvoice(BuyingController):
 				if pi:
 					pi = pi[0][0]
 					frappe.throw(_("Supplier Invoice No exists in Purchase Invoice {0}".format(pi)))
+
+	def unlink_inter_company_invoice(self):
+		if self.inter_company_invoice_reference:
+			frappe.db.set_value("Purchase Invoice", self.name,\
+				"inter_company_invoice_reference", "")
+			frappe.db.set_value("Sales Invoice", self.inter_company_invoice_reference,\
+				"inter_company_invoice_reference", "")
 
 	def update_billing_status_in_pr(self, update_modified=True):
 		updated_pr = []
