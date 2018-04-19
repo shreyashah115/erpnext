@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
-import frappe, erpnext
+import frappe, erpnext, json
 import frappe.defaults
 from frappe.utils import cint, flt
 from frappe import _, msgprint, throw
@@ -993,67 +993,70 @@ def set_account_for_mode_of_payment(self):
 		if not data.account:
 			data.account = get_bank_cash_account(data.mode_of_payment, self.company).get("account")
 
+def get_inter_company_details(doc):
+	supplier = frappe.db.get_value("Supplier", {"is_internal_supplier":1, "represents_company": doc.get("company")}, "name")
+	company = frappe.db.get_value("Customer", {"name": doc.get("customer")}, "represents_company")
+
+	return {
+		"supplier": supplier, 
+		"company": company
+	}
+
 @frappe.whitelist()
-def get_allowed_companies(customer=None, supplier=None):
-	if customer:
-		parent = customer
-		parenttype = "Customer"
-	elif supplier:
-		parent = supplier
-		parenttype = "Supplier"
+def validate_inter_company_invoice(doc):
+	doc = json.loads(doc)
+	details = get_inter_company_details(doc)
+
 	companies = frappe.db.sql("""select company from `tabAllowed To Transact With`
-		where parenttype = '{0}' and parent = '{1}'""".format(parenttype, parent), as_list = 1)
+		where parenttype = "Customer" and parent = '{0}'""".format(doc.get("customer"), as_list = 1))
 	companies = [company[0] for company in companies]
-	return companies
+	if not doc.get("company") in companies:
+		frappe.throw(_("Customer not allowed to transact with {0}").format(doc.get("company")))
+
+	buying = frappe.db.get_value("Price List", doc.get("selling_price_list"), "buying")
+	if not buying:
+		frappe.throw(_("Buying and Selling Price List should be same for Inter Company Transactions."))
+
+	supplier = details.get("supplier")
+	if not supplier:
+		frappe.throw(_("No supplier found for Inter Company Transactions."))
+
+	company = details.get("company")
+	default_currency = frappe.db.get_value("Company", company, "default_currency")
+	if default_currency != doc.get("currency"):
+		frappe.throw(_("Company currencies of both the companies should match for Inter Company Transactions."))
+
+	return company, supplier
 
 @frappe.whitelist()
 def make_inter_company_invoice(source_name, target_doc=None):
 	from frappe.model.mapper import get_mapped_doc
-	# frappe.errprint(source_name)
-	# def set_missing_values(source, target):
-	# 	doc = frappe.get_doc(target)
+	source_doc = frappe.get_doc("Sales Invoice", source_name)
+	details = get_inter_company_details(source_doc)
+	def set_missing_values(source, target):
+		target.run_method("set_missing_values")
+	def update_purchase_details(source_doc, target_doc, source_parent):
+		target_doc.company = details.get("company")
+		target_doc.supplier = details.get("supplier")
+		target_doc.buying_price_list = source_doc.selling_price_list
+	def update_item(source_doc, target_doc, source_parent):
 
-	# 	# for tax in doc.get("taxes"):
-	# 	# 	if tax.charge_type == "Actual":
-	# 	# 		tax.tax_amount = -1 * tax.tax_amount
-
-	# 	# doc.discount_amount = -1 * source.discount_amount
-	# 	doc.run_method("calculate_taxes_and_totals")
-	# def update_price_list(source_doc, target_doc, source_parent):
-	# 	if source_doc.selling_price_list:
-	# 		buying = frappe.get_doc("Price List", source_doc.selling_price_list, "buying")
-	# 		if buying == 1:
-	# 			target_doc.buying_price_list = source_doc.selling_price_list
-	# 		else:
-	# 			target_doc.buying_price_list = ""
-	# 		frappe.errprint(target_doc.buying_price_list)
-	# def update_item(source_doc, target_doc, source_parent):
-
-	# 	target_doc.income_account = ""
-	# 	target_doc.expense_account = ""
-	# 	target_doc.cost_center = ""
+		target_doc.income_account = ""
+		target_doc.expense_account = ""
+		target_doc.cost_center = ""
 
 	base_doc = "Sales Invoice"
 	doctype = "Purchase Invoice"
 	doclist = get_mapped_doc(base_doc, source_name,	{
 		"Sales Invoice": {
 			"doctype": doctype,
-			"validation": {
-				"docstatus": ["=", 1]
-			},
-			# "postprocess": update_price_list
+			"postprocess": update_purchase_details
 		},
 		"Sales Invoice Item": {
 			"doctype": doctype + " Item",
-			# "field_map": {
-			# 	"serial_no": "serial_no",
-			# 	"batch_no": "batch_no"
-			# },
-			# "postprocess": update_item
+			"postprocess": update_item
 		}
-		# "Payment Schedule": {
-		# 	"doctype": "Payment Schedule"
-		# }
-	}, target_doc)
+
+	}, target_doc, set_missing_values)
 
 	return doclist
