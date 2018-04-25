@@ -55,10 +55,12 @@ class TestPayrollEntry(unittest.TestCase):
 		if not frappe.db.get_value('Salary Component Account',
 			{'parent': 'Basic Salary', 'company': company}):
 			salary_component = frappe.get_doc('Salary Component', 'Basic Salary')
-			salary_component.append('accounts', {
+			accounts = []
+			accounts.append({
 				'company': company,
-				'default_account': 'Salary - WP'
+				'default_account': "Salary - " + frappe.db.get_value('Company', company, 'abbr')
 			})
+			salary_component.set('accounts', accounts)
 
 		company_doc = frappe.get_doc('Company', company)
 		if not company_doc.default_payroll_payable_account:
