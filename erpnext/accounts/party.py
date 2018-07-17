@@ -421,9 +421,9 @@ def get_dashboard_info(party_type, party):
 		or frappe.db.get_value('Company', company, 'default_currency')
 
 	if party_account_currency==company_default_currency:
-		total_field = "base_grand_total"
-	else:
 		total_field = "grand_total"
+	else:
+		total_field = "base_grand_total"
 
 	doctype = "Sales Invoice" if party_type=="Customer" else "Purchase Invoice"
 
