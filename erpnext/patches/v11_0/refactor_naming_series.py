@@ -89,10 +89,10 @@ def get_series():
 	for doctype in doctype_series_map:
 		if not frappe.db.exists('DocType', doctype):
 			continue
-
 		if not frappe.db.a_row_exists(doctype):
 			continue
-
+		if not frappe.db.has_column(doctype, 'naming_series'):
+			continue
 		series_to_preserve = get_series_to_preserve(doctype)
 		default_series = get_default_series(doctype)
 		if not series_to_preserve:
