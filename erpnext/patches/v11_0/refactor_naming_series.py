@@ -93,7 +93,7 @@ def get_series():
 			continue
 		if not frappe.db.has_column(doctype, 'naming_series'):
 			continue
-		series_to_preserve = get_series_to_preserve(doctype)
+		series_to_preserve = filter(None, get_series_to_preserve(doctype))
 		default_series = get_default_series(doctype)
 		print('first', series_to_preserve)
 		if not series_to_preserve:
@@ -104,7 +104,6 @@ def get_series():
 		# set naming series property setter
 		series_to_preserve = list(set(series_to_preserve + existing_series))
 		print(series_to_preserve)
-		print(default_series)
 		print(doctype)
 		if series_to_preserve:
 			series_to_set[doctype] = {"options": "\n".join(series_to_preserve), "default": default_series}
