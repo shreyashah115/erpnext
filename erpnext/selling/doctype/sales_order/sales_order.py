@@ -902,7 +902,7 @@ def get_default_bom_item(item_code):
 	return bom
 
 @frappe.whitelist()
-def make_raw_material_request(items, company, sales_order, project):
+def make_raw_material_request(items, company, sales_order, project=None):
 	raw_materials = get_items_for_material_requests(items, company)
 	if not raw_materials:
 		frappe.msgprint(_("Material Request not created, as quantity for Raw Materials already exists."))
