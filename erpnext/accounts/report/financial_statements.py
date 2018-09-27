@@ -338,7 +338,7 @@ def set_gl_entries_by_account(
 	"""Returns a dict like { "account": [gl entries], ... }"""
 
 	additional_conditions = get_additional_conditions(from_date, ignore_closing_entries, filters)
-
+	frappe.errprint(additional_conditions)
 	gl_entries = frappe.db.sql("""select posting_date, account, debit, credit, is_opening, fiscal_year, debit_in_account_currency, credit_in_account_currency, account_currency from `tabGL Entry`
 		where company=%(company)s
 		{additional_conditions}
@@ -352,10 +352,10 @@ def set_gl_entries_by_account(
 			"to_date": to_date,
 			"lft": root_lft,
 			"rgt": root_rgt,
-			"cost_center": filters.cost_center,
+			"cost_center": filters.get("cost_center"),
 			"project": filters.project
 		},
-		as_dict=True)
+		as_dict=True, debug=True)
 
 	if filters and filters.get('presentation_currency'):
 		convert_to_presentation_currency(gl_entries, get_currency(filters))
